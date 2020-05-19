@@ -87,6 +87,9 @@ declare class uPlot {
 	/** converts a CSS pixel position (relative to plotting area) to the closest data index */
 	posToIdx(left: number): number;
 
+	/** returns the absolute distance in the scale's units of a given scale */
+	scaleDistance(scaleKey: string): number;
+
 	/** converts a CSS pixel position (relative to plotting area) to a value along the given scale */
 	posToVal(leftTop: number, scaleKey: string): number;
 
@@ -114,6 +117,8 @@ declare class uPlot {
 
 declare namespace uPlot {
 	export type AlignedData = readonly (number | null)[][];
+
+	export type SyncScales = [string, string];
 
 	export type MinMax = [number, number];
 
@@ -245,6 +250,8 @@ declare namespace uPlot {
 			key: string;
 			/** determines if series toggling and focus via cursor is synced across charts */
 			setSeries?: boolean; // true
+			/** sets the x and y scales to sync by values. null will sync by relative (%) position */
+			scales?: SyncScales; // [xScaleKey, null]
 		};
 
 		/** focus series closest to cursor */

@@ -87,6 +87,12 @@
 					sync: {
 						key: "moo",
 						setSeries: true,
+						scales: ["x", "y"],
+					},
+					drag: {
+						x: true,
+						y: true,
+						uni: Infinity
 					},
 				};
 
@@ -121,7 +127,7 @@
 						{
 							values: (u, vals, space) => vals.map(v => +v.toFixed(1) + "%"),
 						},
-					],
+					]
 				};
 
 				let uplot1 = new uPlot(opts, data[0], document.body);
