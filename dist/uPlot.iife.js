@@ -2086,6 +2086,7 @@ var uPlot = (function () {
 		var mouseTop1;
 
 		var dragging = false;
+		self.isDragging = function () { return dragging; };
 
 		var drag =  cursor.drag;
 

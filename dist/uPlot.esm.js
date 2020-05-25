@@ -2074,6 +2074,7 @@ function uPlot(opts, data, then) {
 	let mouseTop1;
 
 	let dragging = false;
+	self.isDragging = () => dragging;
 
 	const drag =  cursor.drag;
 
