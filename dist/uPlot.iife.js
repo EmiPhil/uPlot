@@ -1698,23 +1698,23 @@ var uPlot = (function () {
 			// todo: don't build gaps on dir = -1 pass
 			var gaps = [];
 
-			var accX = round(getXPos(xdata[dir == 1 ? _i0 : _i1], scaleX, plotWid, plotLft));
+			var accX = getXPos(xdata[dir == 1 ? _i0 : _i1], scaleX, plotWid, plotLft);
 
 			// the moves the shape edge outside the canvas so stroke doesnt bleed in
 			if (s.band && dir == 1 && _i0 == i0) {
 				if (width)
-					{ stroke.lineTo(-width, round(getYPos(ydata[_i0], scaleY, plotHgt, plotTop))); }
+					{ stroke.lineTo(-width, getYPos(ydata[_i0], scaleY, plotHgt, plotTop)); }
 
 				if (scaleX.min < xdata[0])
 					{ gaps.push([plotLft, accX - 1]); }
 			}
 
 			for (var i = dir == 1 ? _i0 : _i1; i >= _i0 && i <= _i1; i += dir) {
-				var x = round(getXPos(xdata[i], scaleX, plotWid, plotLft));
+				var x = getXPos(xdata[i], scaleX, plotWid, plotLft);
 
 				if (x == accX) {
 					if (ydata[i] != null) {
-						outY = round(getYPos(ydata[i], scaleY, plotHgt, plotTop));
+						outY = getYPos(ydata[i], scaleY, plotHgt, plotTop);
 						minY = min(outY, minY);
 						maxY = max(outY, maxY);
 					}
@@ -1732,7 +1732,7 @@ var uPlot = (function () {
 						{ addGap = true; }
 
 					if (ydata[i] != null) {
-						outY = round(getYPos(ydata[i], scaleY, plotHgt, plotTop));
+						outY = getYPos(ydata[i], scaleY, plotHgt, plotTop);
 						stroke.lineTo(x, outY);
 						minY = maxY = outY;
 
@@ -1775,7 +1775,7 @@ var uPlot = (function () {
 						{ gaps.push([accX, plotLft + plotWid]); }
 				}
 
-				stroke.lineTo(_x, round(getYPos(ydata[_iy], scaleY, plotHgt, plotTop)));
+				stroke.lineTo(_x, getYPos(ydata[_iy], scaleY, plotHgt, plotTop));
 			}
 
 			if (dir == 1) {
@@ -1784,7 +1784,7 @@ var uPlot = (function () {
 				if (s.fill != null) {
 					var fill = _paths.fill = new Path2D(stroke);
 
-					var zeroY = round(getYPos(0, scaleY, plotHgt, plotTop));
+					var zeroY = getYPos(0, scaleY, plotHgt, plotTop);
 					fill.lineTo(plotLft + plotWid, zeroY);
 					fill.lineTo(plotLft, zeroY);
 				}
