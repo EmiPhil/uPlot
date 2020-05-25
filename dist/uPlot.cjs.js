@@ -835,9 +835,12 @@ function _sync(opts) {
 			clients = clients.filter(function (c) { return c != client; });
 		},
 		pub: function pub(type, self, x, y, w, h, i) {
+			var extras = [], len = arguments.length - 7;
+			while ( len-- > 0 ) extras[ len ] = arguments[ len + 7 ];
+
 			if (clients.length > 1) {
 				clients.forEach(function (client) {
-					client != self && client.pub(type, self, x, y, w, h, i);
+					client != self && client.pub.apply(client, [ type, self, x, y, w, h, i ].concat( extras ));
 				});
 			}
 		}
@@ -1876,7 +1879,7 @@ function uPlot(opts, data, then) {
 			var plotDim = ori == 0 ? plotWid : plotHgt;
 			var plotOff = ori == 0 ? plotLft : plotTop;
 
-			var canOffs = splits.map(function (val) { return round(getPos(val, scale, plotDim, plotOff)); });
+			var canOffs = splits.map(function (val) { return getPos(val, scale, plotDim, plotOff); });
 
 			var axisGap  = round(axis.gap * pxRatio);
 
@@ -2297,8 +2300,8 @@ function uPlot(opts, data, then) {
 		cursorRaf = 0;
 
 		if (cursor.show) {
-			cursor.x && trans(vt,round(mouseLeft1),0);
-			cursor.y && trans(hz,0,round(mouseTop1));
+			cursor.x && trans(vt,mouseLeft1,0);
+			cursor.y && trans(hz,0,mouseTop1);
 		}
 
 		var idx;
@@ -2557,28 +2560,36 @@ function uPlot(opts, data, then) {
 		}
 	}
 
-	function mouseUp(e, src, _x, _y, _w, _h, _i) {
+	function mouseUp(e, src, _x, _y, _w, _h, _i, _drag) {
 		var obj, obj$1;
 
 		var isSyncReq = src != null;
+		var shouldDrag;
 
 		if (isSyncReq || filtMouse(e)) {
 			dragging = false;
 
 			cacheMouse(e, src, _x, _y, _w, _h, _i, false, true);
 
-			// it is possible that the cursor is out of bounds of the chart if it comes via sync,
-			// and it doesn't make sense to do drag work when that is the case (but we still want
-			// to lock the cursor)
-			var mouseXInBounds = mouseLeft0 >= 0 && mouseLeft0 <= plotWidCss;
-			var mouseYInBounds = mouseTop0 >= 0 && mouseTop0 <= plotHgtCss;
-			var mouseInBounds = mouseXInBounds && mouseYInBounds;
+			var locked = cursor.lock && cursor.locked;
 
-			if (mouseInBounds && (mouseLeft1 != mouseLeft0 || mouseTop1 != mouseTop0)) {
+			if (_drag == null) {
+				var shouldXDrag = abs(mouseLeft0 - mouseLeft1) / plotWidCss > 0.002;
+				var shouldYDrag = abs(mouseTop0 - mouseTop1) / plotHgtCss > 0.002;
+				shouldDrag = shouldXDrag || shouldYDrag;
+			}
+			else
+				{ shouldDrag = _drag; }
+
+			if (!locked && shouldDrag) {
 				setSelect(select);
 
 				if (drag.setScale) {
 					batch(function () {
+						var ref = isSyncReq
+							? [src.posToVal, src.select]
+							: [scaleValueAtPos, select];
+
 						if (dragX) {
 							_setScale(xScaleKey,
 								scaleValueAtPos(select[LEFT], xScaleKey),
@@ -2637,7 +2648,7 @@ function uPlot(opts, data, then) {
 
 		if (!isSyncReq) {
 			off(mouseup, doc, mouseUp);
-			sync.pub(mouseup, self, mouseLeft1, mouseTop1, plotWidCss, plotHgtCss, null);
+			sync.pub(mouseup, self, mouseLeft1, mouseTop1, plotWidCss, plotHgtCss, null, shouldDrag);
 		}
 	}
 
@@ -2723,7 +2734,10 @@ function uPlot(opts, data, then) {
 	 sync.sub(self);
 
 	function pub(type, src, x, y, w, h, i) {
-		events[type](null, src, x, y, w, h, i);
+		var extras = [], len = arguments.length - 7;
+		while ( len-- > 0 ) extras[ len ] = arguments[ len + 7 ];
+
+		events[type].apply(events, [ null, src, x, y, w, h, i ].concat( extras ));
 	}
 
 	 (self.pub = pub);

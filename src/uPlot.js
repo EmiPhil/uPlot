@@ -1133,7 +1133,7 @@ export default function uPlot(opts, data, then) {
 			let plotDim = ori == 0 ? plotWid : plotHgt;
 			let plotOff = ori == 0 ? plotLft : plotTop;
 
-			let canOffs = splits.map(val => round(getPos(val, scale, plotDim, plotOff)));
+			let canOffs = splits.map(val => getPos(val, scale, plotDim, plotOff));
 
 			let axisGap  = round(axis.gap * pxRatio);
 
@@ -1554,8 +1554,8 @@ export default function uPlot(opts, data, then) {
 		cursorRaf = 0;
 
 		if (cursor.show) {
-			cursor.x && trans(vt,round(mouseLeft1),0);
-			cursor.y && trans(hz,0,round(mouseTop1));
+			cursor.x && trans(vt,mouseLeft1,0);
+			cursor.y && trans(hz,0,mouseTop1);
 		}
 
 		let idx;

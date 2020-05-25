@@ -837,10 +837,10 @@ function _sync(opts) {
 		unsub(client) {
 			clients = clients.filter(c => c != client);
 		},
-		pub(type, self, x, y, w, h, i) {
+		pub(type, self, x, y, w, h, i, ...extras) {
 			if (clients.length > 1) {
 				clients.forEach(client => {
-					client != self && client.pub(type, self, x, y, w, h, i);
+					client != self && client.pub(type, self, x, y, w, h, i, ...extras);
 				});
 			}
 		}
@@ -1868,7 +1868,7 @@ function uPlot(opts, data, then) {
 			let plotDim = ori == 0 ? plotWid : plotHgt;
 			let plotOff = ori == 0 ? plotLft : plotTop;
 
-			let canOffs = splits.map(val => round(getPos(val, scale, plotDim, plotOff)));
+			let canOffs = splits.map(val => getPos(val, scale, plotDim, plotOff));
 
 			let axisGap  = round(axis.gap * pxRatio);
 
@@ -2289,8 +2289,8 @@ function uPlot(opts, data, then) {
 		cursorRaf = 0;
 
 		if (cursor.show) {
-			cursor.x && trans(vt,round(mouseLeft1),0);
-			cursor.y && trans(hz,0,round(mouseTop1));
+			cursor.x && trans(vt,mouseLeft1,0);
+			cursor.y && trans(hz,0,mouseTop1);
 		}
 
 		let idx;
@@ -2545,26 +2545,34 @@ function uPlot(opts, data, then) {
 		}
 	}
 
-	function mouseUp(e, src, _x, _y, _w, _h, _i) {
+	function mouseUp(e, src, _x, _y, _w, _h, _i, _drag) {
 		const isSyncReq = src != null;
+		let shouldDrag;
 
 		if (isSyncReq || filtMouse(e)) {
 			dragging = false;
 
 			cacheMouse(e, src, _x, _y, _w, _h, _i, false, true);
 
-			// it is possible that the cursor is out of bounds of the chart if it comes via sync,
-			// and it doesn't make sense to do drag work when that is the case (but we still want
-			// to lock the cursor)
-			let mouseXInBounds = mouseLeft0 >= 0 && mouseLeft0 <= plotWidCss;
-			let mouseYInBounds = mouseTop0 >= 0 && mouseTop0 <= plotHgtCss;
-			let mouseInBounds = mouseXInBounds && mouseYInBounds;
+			let locked = cursor.lock && cursor.locked;
 
-			if (mouseInBounds && (mouseLeft1 != mouseLeft0 || mouseTop1 != mouseTop0)) {
+			if (_drag == null) {
+				let shouldXDrag = abs(mouseLeft0 - mouseLeft1) / plotWidCss > 0.002;
+				let shouldYDrag = abs(mouseTop0 - mouseTop1) / plotHgtCss > 0.002;
+				shouldDrag = shouldXDrag || shouldYDrag;
+			}
+			else
+				shouldDrag = _drag;
+
+			if (!locked && shouldDrag) {
 				setSelect(select);
 
 				if (drag.setScale) {
 					batch(() => {
+						let [valAtPos, sel] = isSyncReq
+							? [src.posToVal, src.select]
+							: [scaleValueAtPos, select];
+
 						if (dragX) {
 							_setScale(xScaleKey,
 								scaleValueAtPos(select[LEFT], xScaleKey),
@@ -2621,7 +2629,7 @@ function uPlot(opts, data, then) {
 
 		if (!isSyncReq) {
 			off(mouseup, doc, mouseUp);
-			sync.pub(mouseup, self, mouseLeft1, mouseTop1, plotWidCss, plotHgtCss, null);
+			sync.pub(mouseup, self, mouseLeft1, mouseTop1, plotWidCss, plotHgtCss, null, shouldDrag);
 		}
 	}
 
@@ -2709,8 +2717,8 @@ function uPlot(opts, data, then) {
 
 	 sync.sub(self);
 
-	function pub(type, src, x, y, w, h, i) {
-		events[type](null, src, x, y, w, h, i);
+	function pub(type, src, x, y, w, h, i, ...extras) {
+		events[type](null, src, x, y, w, h, i, ...extras);
 	}
 
 	 (self.pub = pub);
