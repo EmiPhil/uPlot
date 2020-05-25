@@ -1339,6 +1339,7 @@ export default function uPlot(opts, data, then) {
 	let mouseTop1;
 
 	let dragging = false;
+	self.isDragging = () => dragging;
 
 	const drag = FEAT_CURSOR && cursor.drag;
 
