@@ -1590,7 +1590,7 @@ export default function uPlot(opts, data, then) {
 
 			let scX = scales[xScaleKey];
 
-			let xPos = round3(getXPos(data[0][idx], scX, plotWidCss, 0));
+			let xPos = getXPos(data[0][idx], scX, plotWidCss, 0);
 
 			for (let i = 0; i < series.length; i++) {
 				let s = series[i];
@@ -1598,7 +1598,7 @@ export default function uPlot(opts, data, then) {
 				if (i > 0 && s.show) {
 					let valAtIdx = data[i][idx];
 
-					let yPos = valAtIdx == null ? -10 : round3(getYPos(valAtIdx, scales[s.scale], plotHgtCss, 0));
+					let yPos = valAtIdx == null ? -10 : getYPos(valAtIdx, scales[s.scale], plotHgtCss, 0);
 
 					distsToCursor[i] = yPos > 0 ? abs(yPos - mouseTop1) : inf;
 

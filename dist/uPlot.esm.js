@@ -1524,8 +1524,8 @@ function uPlot(opts, data, then) {
 
 		for (let pi = i0; pi <= i1; pi++) {
 			if (data[si][pi] != null) {
-				let x = round(getXPos(data[0][pi],  scales[xScaleKey], plotWid, plotLft));
-				let y = round(getYPos(data[si][pi], scales[s.scale],   plotHgt, plotTop));
+				let x = getXPos(data[0][pi],  scales[xScaleKey], plotWid, plotLft);
+				let y = getYPos(data[si][pi], scales[s.scale],   plotHgt, plotTop);
 
 				path.moveTo(x + rad, y);
 				path.arc(x, y, rad, 0, PI * 2);
@@ -2325,7 +2325,7 @@ function uPlot(opts, data, then) {
 
 			let scX = scales[xScaleKey];
 
-			let xPos = round3(getXPos(data[0][idx], scX, plotWidCss, 0));
+			let xPos = getXPos(data[0][idx], scX, plotWidCss, 0);
 
 			for (let i = 0; i < series.length; i++) {
 				let s = series[i];
@@ -2333,7 +2333,7 @@ function uPlot(opts, data, then) {
 				if (i > 0 && s.show) {
 					let valAtIdx = data[i][idx];
 
-					let yPos = valAtIdx == null ? -10 : round3(getYPos(valAtIdx, scales[s.scale], plotHgtCss, 0));
+					let yPos = valAtIdx == null ? -10 : getYPos(valAtIdx, scales[s.scale], plotHgtCss, 0);
 
 					distsToCursor[i] = yPos > 0 ? abs(yPos - mouseTop1) : inf;
 

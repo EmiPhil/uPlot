@@ -1526,8 +1526,8 @@ var uPlot = (function () {
 
 			for (var pi = i0; pi <= i1; pi++) {
 				if (data[si][pi] != null) {
-					var x = round(getXPos(data[0][pi],  scales[xScaleKey], plotWid, plotLft));
-					var y = round(getYPos(data[si][pi], scales[s.scale],   plotHgt, plotTop));
+					var x = getXPos(data[0][pi],  scales[xScaleKey], plotWid, plotLft);
+					var y = getYPos(data[si][pi], scales[s.scale],   plotHgt, plotTop);
 
 					path.moveTo(x + rad, y);
 					path.arc(x, y, rad, 0, PI * 2);
@@ -2334,7 +2334,7 @@ var uPlot = (function () {
 
 				var scX = scales[xScaleKey];
 
-				var xPos = round3(getXPos(data[0][idx], scX, plotWidCss, 0));
+				var xPos = getXPos(data[0][idx], scX, plotWidCss, 0);
 
 				for (var i$1 = 0; i$1 < series.length; i$1++) {
 					var s = series[i$1];
@@ -2342,7 +2342,7 @@ var uPlot = (function () {
 					if (i$1 > 0 && s.show) {
 						var valAtIdx = data[i$1][idx];
 
-						var yPos = valAtIdx == null ? -10 : round3(getYPos(valAtIdx, scales[s.scale], plotHgtCss, 0));
+						var yPos = valAtIdx == null ? -10 : getYPos(valAtIdx, scales[s.scale], plotHgtCss, 0);
 
 						distsToCursor[i$1] = yPos > 0 ? abs(yPos - mouseTop1) : inf;
 
