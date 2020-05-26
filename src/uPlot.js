@@ -1345,6 +1345,7 @@ export default function uPlot(opts, data, then) {
 
 	let dragX = FEAT_CURSOR && drag.x;
 	let dragY = FEAT_CURSOR && drag.y;
+
 	if (FEAT_CURSOR && cursor.show) {
 		let c = "cursor-";
 
@@ -1676,7 +1677,7 @@ export default function uPlot(opts, data, then) {
 					setStylePx(selectDiv, LEFT,  select[LEFT] = minX);
 					setStylePx(selectDiv, WIDTH, select[WIDTH] = maxX - minX);
 	
-					if (uni != null && !dragY) {
+					if (!dragY) {
 						setStylePx(selectDiv, TOP, select[TOP] = 0);
 						setStylePx(selectDiv, HEIGHT, select[HEIGHT] = plotHgtCss);
 					}
@@ -1688,7 +1689,7 @@ export default function uPlot(opts, data, then) {
 					setStylePx(selectDiv, TOP,    select[TOP] = minY);
 					setStylePx(selectDiv, HEIGHT, select[HEIGHT] = maxY - minY);
 	
-					if (uni != null && !dragX) {
+					if (!dragX) {
 						setStylePx(selectDiv, LEFT, select[LEFT] = 0);
 						setStylePx(selectDiv, WIDTH, select[WIDTH] = plotWidCss);
 					}
@@ -1790,8 +1791,8 @@ export default function uPlot(opts, data, then) {
 
 	function hideSelect() {
 		setSelect({
-			width:	!drag.x ? plotWidCss : 0,
-			height:	!drag.y ? plotHgtCss : 0,
+			width: 0,
+			height: 0,
 		}, false);
 	}
 
@@ -1800,9 +1801,6 @@ export default function uPlot(opts, data, then) {
 			dragging = true;
 
 			cacheMouse(e, src, _x, _y, _w, _h, _i, true, false);
-
-			if (select.show && (dragX || dragY))
-				hideSelect();
 
 			if (e != null) {
 				on(mouseup, doc, mouseUp);
@@ -1816,17 +1814,24 @@ export default function uPlot(opts, data, then) {
 			dragging = false;
 
 			cacheMouse(e, src, _x, _y, _w, _h, _i, false, true);
+			setSelect(select);
 
 			if (drag.setScale && (select[WIDTH] || select[HEIGHT])) {
+
+				if (syncKey != null) {
+					dragX = drag.x;
+					dragY = drag.y;
+				}
+
 				batch(() => {
-					if (drag.x) {
+					if (dragX) {
 						_setScale(xScaleKey,
 							scaleValueAtPos(select[LEFT], xScaleKey),
 							scaleValueAtPos(select[LEFT] + select[WIDTH], xScaleKey)
 						);
 					}
 
-					if (drag.y) {
+					if (dragY) {
 						for (let k in scales) {
 							let sc = scales[k];
 
