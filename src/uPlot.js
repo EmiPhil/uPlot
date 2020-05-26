@@ -1637,6 +1637,11 @@ export default function uPlot(opts, data, then) {
 
 					setStylePx(selectDiv, LEFT, select[LEFT]);
 					setStylePx(selectDiv, WIDTH, select[WIDTH]);
+
+					if (!yKey) {
+						setStylePx(selectDiv, TOP, select[TOP] = 0);
+						setStylePx(selectDiv, HEIGHT, select[HEIGHT] = plotHgtCss);
+					}
 				}
 
 				if (yKey) {
@@ -1649,6 +1654,11 @@ export default function uPlot(opts, data, then) {
 
 					setStylePx(selectDiv, TOP, select[TOP]);
 					setStylePx(selectDiv, HEIGHT, select[HEIGHT]);
+
+					if (!xKey) {
+						setStylePx(selectDiv, LEFT, select[LEFT] = 0);
+						setStylePx(selectDiv, WIDTH, select[WIDTH] = plotWidCss);
+					}
 				}
 
 			} else {
