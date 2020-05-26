@@ -1063,7 +1063,7 @@ function uPlot(opts, data, then) {
 			if (pt) {
 				addClass(pt, "cursor-pt");
 				addClass(pt, s.class);
-				trans(pt, -10, -10);
+				//trans(pt, -10, -10);
 				over.insertBefore(pt, cursorPts[si]);
 
 				return pt;
@@ -2080,7 +2080,6 @@ function uPlot(opts, data, then) {
 
 	let dragX =  drag.x;
 	let dragY =  drag.y;
-	
 	if ( cursor.show) {
 		let c = "cursor-";
 
@@ -2232,13 +2231,8 @@ function uPlot(opts, data, then) {
 		return closestIdx(v, data[0], i0, i1);
 	}
 
-	function scaleDistance(scale) {
-		return abs(scales[scale].max - scales[scale].min);
-	}
-
 	self.valToIdx = val => closestIdx(val, data[0]);
 	self.posToIdx = closestIdxFromXpos;
-	self.scaleDistance = scaleDistance;
 	self.posToVal = scaleValueAtPos;
 	self.valToPos = (val, scale, can) => (
 		scale == xScaleKey ?
@@ -2388,11 +2382,7 @@ function uPlot(opts, data, then) {
 				}
 
 			} else {
-				// setSelect should not be triggered on move events
-	
-				dragX = drag.x;
-				dragY = drag.y;
-	
+				// setSelect should not be triggered on move events	
 				let uni = drag.uni;
 	
 				if (uni != null) {
@@ -2402,7 +2392,7 @@ function uPlot(opts, data, then) {
 					dragX = dx >= uni;
 					dragY = dy >= uni;
 	
-					// force omnidirectionality when both are under uni limit
+					// force unidirectionality when both are under uni limit
 					if (!dragX && !dragY) {
 						if (dy > dx)
 							dragY = true;
@@ -2542,7 +2532,7 @@ function uPlot(opts, data, then) {
 
 			cacheMouse(e, src, _x, _y, _w, _h, _i, true, false);
 
-			if (select.show && drag.setScale && (drag.x || drag.y))
+			if (select.show && (dragX || dragY))
 				hideSelect();
 
 			if (e != null) {
@@ -2552,79 +2542,36 @@ function uPlot(opts, data, then) {
 		}
 	}
 
-	function mouseUp(e, src, _x, _y, _w, _h, _i, _drag) {
-		const isSyncReq = src != null;
-		let shouldDrag;
-
-		if (isSyncReq || filtMouse(e)) {
+	function mouseUp(e, src, _x, _y, _w, _h, _i) {
+		if (src != null || filtMouse(e)) {
 			dragging = false;
 
 			cacheMouse(e, src, _x, _y, _w, _h, _i, false, true);
 
-			let locked = cursor.lock && cursor.locked;
+			if (drag.setScale && (select[WIDTH] || select[HEIGHT])) {
+				batch(() => {
+					if (drag.x) {
+						_setScale(xScaleKey,
+							scaleValueAtPos(select[LEFT], xScaleKey),
+							scaleValueAtPos(select[LEFT] + select[WIDTH], xScaleKey)
+						);
+					}
 
-			if (_drag == null) {
-				let shouldXDrag = abs(mouseLeft0 - mouseLeft1) / plotWidCss > 0.002;
-				let shouldYDrag = abs(mouseTop0 - mouseTop1) / plotHgtCss > 0.002;
-				shouldDrag = shouldXDrag || shouldYDrag;
-			}
-			else
-				shouldDrag = _drag;
+					if (drag.y) {
+						for (let k in scales) {
+							let sc = scales[k];
 
-			if (!locked && shouldDrag) {
-				setSelect(select);
-
-				if (drag.setScale) {
-					batch(() => {
-						let [valAtPos, sel] = isSyncReq
-							? [src.posToVal, src.select]
-							: [scaleValueAtPos, select];
-
-						if (dragX) {
-							_setScale(xScaleKey,
-								scaleValueAtPos(select[LEFT], xScaleKey),
-								scaleValueAtPos(select[LEFT] + select[WIDTH], xScaleKey)
-							);
-						}
-
-						if (dragY) {
-							for (let k in scales) {
-								let sc = scales[k];
-
-								if (k != xScaleKey && sc.from == null) {
-									_setScale(k,
-										scaleValueAtPos(select[TOP] + select[HEIGHT], k),
-										scaleValueAtPos(select[TOP], k)
-									);
-								}
+							if (k != xScaleKey && sc.from == null) {
+								_setScale(k,
+									scaleValueAtPos(select[TOP] + select[HEIGHT], k),
+									scaleValueAtPos(select[TOP], k)
+								);
 							}
 						}
-					});
-
-					hideSelect();
-				}
-				else {
-					let [xKey, yKey] = syncOpts.scales;
-					if (isSyncReq && (xKey != null || yKey != null)) {
-						let sc0 = scales,
-							sc1 = src.scales;
-						
-						if (xKey != null) {
-							let _min = getXPos(sc1[xKey].min, sc0[xKey], plotWidCss, 0),
-								_max = getXPos(sc1[xKey].max, sc0[xKey], plotWidCss, 0);
-
-							setSelect({ [LEFT]: _min, [WIDTH]: abs(_max - _min) });
-						}
-						if (yKey != null) {
-							let _min = getYPos(sc1[yKey].min, sc0[yKey], plotHgtCss, 0),
-								_max = getYPos(sc1[yKey].max, sc0[yKey], plotHgtCss, 0);
-
-							setSelect({ [TOP]: _max, [HEIGHT]: abs(_max - _min) });
-						}
-						
-						updateCursor();
 					}
-				}
+				});
+
+				hideSelect();
 			}
 			else if (cursor.lock) {
 				cursor.locked = !cursor.locked;
@@ -2634,9 +2581,9 @@ function uPlot(opts, data, then) {
 			}
 		}
 
-		if (!isSyncReq) {
+		if (e != null) {
 			off(mouseup, doc, mouseUp);
-			sync.pub(mouseup, self, mouseLeft1, mouseTop1, plotWidCss, plotHgtCss, null, shouldDrag);
+			sync.pub(mouseup, self, mouseLeft1, mouseTop1, plotWidCss, plotHgtCss, null);
 		}
 	}
 

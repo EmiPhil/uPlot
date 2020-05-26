@@ -1061,7 +1061,7 @@ var uPlot = (function () {
 				if (pt) {
 					addClass(pt, "cursor-pt");
 					addClass(pt, s.class);
-					trans(pt, -10, -10);
+					//trans(pt, -10, -10);
 					over.insertBefore(pt, cursorPts[si]);
 
 					return pt;
@@ -2089,7 +2089,6 @@ var uPlot = (function () {
 
 		var dragX =  drag.x;
 		var dragY =  drag.y;
-		
 		if ( cursor.show) {
 			var c = "cursor-";
 
@@ -2241,13 +2240,8 @@ var uPlot = (function () {
 			return closestIdx(v, data[0], i0, i1);
 		}
 
-		function scaleDistance(scale) {
-			return abs(scales[scale].max - scales[scale].min);
-		}
-
 		self.valToIdx = function (val) { return closestIdx(val, data[0]); };
 		self.posToIdx = closestIdxFromXpos;
-		self.scaleDistance = scaleDistance;
 		self.posToVal = scaleValueAtPos;
 		self.valToPos = function (val, scale, can) { return (
 			scale == xScaleKey ?
@@ -2399,11 +2393,7 @@ var uPlot = (function () {
 					}
 
 				} else {
-					// setSelect should not be triggered on move events
-		
-					dragX = drag.x;
-					dragY = drag.y;
-		
+					// setSelect should not be triggered on move events	
 					var uni = drag.uni;
 		
 					if (uni != null) {
@@ -2413,7 +2403,7 @@ var uPlot = (function () {
 						dragX = dx >= uni;
 						dragY = dy >= uni;
 		
-						// force omnidirectionality when both are under uni limit
+						// force unidirectionality when both are under uni limit
 						if (!dragX && !dragY) {
 							if (dy > dx)
 								{ dragY = true; }
@@ -2555,7 +2545,7 @@ var uPlot = (function () {
 
 				cacheMouse(e, src, _x, _y, _w, _h, _i, true, false);
 
-				if (select.show && drag.setScale && (drag.x || drag.y))
+				if (select.show && (dragX || dragY))
 					{ hideSelect(); }
 
 				if (e != null) {
@@ -2565,83 +2555,36 @@ var uPlot = (function () {
 			}
 		}
 
-		function mouseUp(e, src, _x, _y, _w, _h, _i, _drag) {
-			var obj, obj$1;
-
-			var isSyncReq = src != null;
-			var shouldDrag;
-
-			if (isSyncReq || filtMouse(e)) {
+		function mouseUp(e, src, _x, _y, _w, _h, _i) {
+			if (src != null || filtMouse(e)) {
 				dragging = false;
 
 				cacheMouse(e, src, _x, _y, _w, _h, _i, false, true);
 
-				var locked = cursor.lock && cursor.locked;
+				if (drag.setScale && (select[WIDTH] || select[HEIGHT])) {
+					batch(function () {
+						if (drag.x) {
+							_setScale(xScaleKey,
+								scaleValueAtPos(select[LEFT], xScaleKey),
+								scaleValueAtPos(select[LEFT] + select[WIDTH], xScaleKey)
+							);
+						}
 
-				if (_drag == null) {
-					var shouldXDrag = abs(mouseLeft0 - mouseLeft1) / plotWidCss > 0.002;
-					var shouldYDrag = abs(mouseTop0 - mouseTop1) / plotHgtCss > 0.002;
-					shouldDrag = shouldXDrag || shouldYDrag;
-				}
-				else
-					{ shouldDrag = _drag; }
+						if (drag.y) {
+							for (var k in scales) {
+								var sc = scales[k];
 
-				if (!locked && shouldDrag) {
-					setSelect(select);
-
-					if (drag.setScale) {
-						batch(function () {
-							var ref = isSyncReq
-								? [src.posToVal, src.select]
-								: [scaleValueAtPos, select];
-
-							if (dragX) {
-								_setScale(xScaleKey,
-									scaleValueAtPos(select[LEFT], xScaleKey),
-									scaleValueAtPos(select[LEFT] + select[WIDTH], xScaleKey)
-								);
-							}
-
-							if (dragY) {
-								for (var k in scales) {
-									var sc = scales[k];
-
-									if (k != xScaleKey && sc.from == null) {
-										_setScale(k,
-											scaleValueAtPos(select[TOP] + select[HEIGHT], k),
-											scaleValueAtPos(select[TOP], k)
-										);
-									}
+								if (k != xScaleKey && sc.from == null) {
+									_setScale(k,
+										scaleValueAtPos(select[TOP] + select[HEIGHT], k),
+										scaleValueAtPos(select[TOP], k)
+									);
 								}
 							}
-						});
-
-						hideSelect();
-					}
-					else {
-						var ref = syncOpts.scales;
-						var xKey = ref[0];
-						var yKey = ref[1];
-						if (isSyncReq && (xKey != null || yKey != null)) {
-							var sc0 = scales,
-								sc1 = src.scales;
-							
-							if (xKey != null) {
-								var _min = getXPos(sc1[xKey].min, sc0[xKey], plotWidCss, 0),
-									_max = getXPos(sc1[xKey].max, sc0[xKey], plotWidCss, 0);
-
-								setSelect(( obj = {}, obj[LEFT] = _min, obj[WIDTH] = abs(_max - _min), obj ));
-							}
-							if (yKey != null) {
-								var _min$1 = getYPos(sc1[yKey].min, sc0[yKey], plotHgtCss, 0),
-									_max$1 = getYPos(sc1[yKey].max, sc0[yKey], plotHgtCss, 0);
-
-								setSelect(( obj$1 = {}, obj$1[TOP] = _max$1, obj$1[HEIGHT] = abs(_max$1 - _min$1), obj$1 ));
-							}
-							
-							updateCursor();
 						}
-					}
+					});
+
+					hideSelect();
 				}
 				else if (cursor.lock) {
 					cursor.locked = !cursor.locked;
@@ -2651,9 +2594,9 @@ var uPlot = (function () {
 				}
 			}
 
-			if (!isSyncReq) {
+			if (e != null) {
 				off(mouseup, doc, mouseUp);
-				sync.pub(mouseup, self, mouseLeft1, mouseTop1, plotWidCss, plotHgtCss, null, shouldDrag);
+				sync.pub(mouseup, self, mouseLeft1, mouseTop1, plotWidCss, plotHgtCss, null);
 			}
 		}
 
