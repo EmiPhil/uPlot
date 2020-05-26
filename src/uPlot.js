@@ -327,7 +327,7 @@ export default function uPlot(opts, data, then) {
 			if (pt) {
 				addClass(pt, "cursor-pt");
 				addClass(pt, s.class);
-				trans(pt, -10, -10);
+				//trans(pt, -10, -10);
 				over.insertBefore(pt, cursorPts[si]);
 
 				return pt;
