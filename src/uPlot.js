@@ -1345,6 +1345,8 @@ export default function uPlot(opts, data, then) {
 	let dragX = FEAT_CURSOR && drag.x;
 	let dragY = FEAT_CURSOR && drag.y;;
 
+	let dragD = FEAT_CURSOR && drag.dist;
+
 	if (FEAT_CURSOR && cursor.show) {
 		let c = "cursor-";
 
@@ -1615,15 +1617,17 @@ export default function uPlot(opts, data, then) {
 		if (mouseLeft1 >= 0 && select.show && dragging) {
 			// setSelect should not be triggered on move events
 
-			dragX = drag.x;
-			dragY = drag.y;
+			let dx = abs(mouseLeft0 - mouseLeft1);
+			let dy = abs(mouseTop0 - mouseTop1);
+
+			dragX = drag.x && dx >= dragD;
+			dragY = drag.y && dy >= dragD;
+			console.log(dx, dy)
+			console.log(dragX, dragY)
 
 			let uni = drag.uni;
 
-			if (uni != null) {
-				let dx = abs(mouseLeft0 - mouseLeft1);
-				let dy = abs(mouseTop0 - mouseTop1);
-
+			if (uni != null && (dragX && dragY)) {
 				dragX = dx >= uni;
 				dragY = dy >= uni;
 
@@ -1639,6 +1643,7 @@ export default function uPlot(opts, data, then) {
 			if (dragX) {
 				let minX = min(mouseLeft0, mouseLeft1);
 				let maxX = max(mouseLeft0, mouseLeft1);
+				console.log('setstylepx')
 				setStylePx(selectDiv, LEFT,  select[LEFT] = minX);
 				setStylePx(selectDiv, WIDTH, select[WIDTH] = maxX - minX);
 
@@ -1659,6 +1664,14 @@ export default function uPlot(opts, data, then) {
 					setStylePx(selectDiv, WIDTH, select[WIDTH] = plotWidCss);
 				}
 			}
+
+			if (!dragX && !dragY) {
+				console.log('clear')
+				// the drag didn't meet the min dist so clear width/height
+				setStylePx(selectDiv, HEIGHT, select[HEIGHT] = 0);
+				setStylePx(selectDiv, WIDTH,  select[WIDTH]  = 0);
+			}
+			console.log(select)
 		}
 
 		// if ts is present, means we're implicitly syncing own cursor as a result of debounced rAF

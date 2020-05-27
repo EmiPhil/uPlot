@@ -235,6 +235,8 @@ declare namespace uPlot {
 			x?: boolean; // true
 			/** toggles dragging in along y */
 			y?: boolean; // false
+			/** min distance for dragging to start */
+			dist?: number; // 0
 			/** when x & y are true, sets an upper drag limit in CSS px for adaptive/unidirectional behavior */
 			uni?: number; // null
 		};

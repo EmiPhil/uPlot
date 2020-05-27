@@ -27,9 +27,12 @@
 			let variations = [
 				['X only', { x: true, y: false }],
 				['Y only', { x: false, y: true }],
+				['X + min drag distance', { x: true, y: false, dist: 50 }],
+				['Y + min drag distance', { x: false, y: true, dist: 50 }],
 				['X or Y (adaptive)', { x: true, y: true, uni: Infinity }],
 				['X or Y (omni)', { x: true, y: true }],
 				['X or Y (adaptive + omni)', { x: true, y: true, uni: 50 }],
+				['X or Y (adaptive + omni) + min drag distance', { x: true, y: true, uni: 50, dist: 50 }]
 			];
 
 			variations.forEach(([title, dragOpts]) => {
