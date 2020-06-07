@@ -306,7 +306,10 @@ export const cursorOpts = {
 		setScale: true,
 		x: true,
 		y: false,
-		uni: null
+		dist: 0,
+		uni: null,
+		_x: false,
+		_y: false,
 	},
 
 	focus: {
@@ -409,7 +412,8 @@ export const yAxisOpts = {
 
 // takes stroke width
 export function ptDia(width, mult) {
-	return max(round3(5 * mult), round3(width * mult) * 2 - 1);
+	let dia = 3 + (width || 1) * 2;
+	return round3(dia * mult);
 }
 
 function seriesPoints(self, si) {
@@ -424,6 +428,7 @@ export const ySeriesOpts = {
 	scale: "y",
 	show: true,
 	band: false,
+	spanGaps: false,
 	alpha: 1,
 	points: {
 		show: seriesPoints,
@@ -449,8 +454,8 @@ export const xScaleOpts = {
 	time: FEAT_TIME,
 	auto: false,
 	distr: 1,
-	min:  inf,
-	max: -inf,
+	min: null,
+	max: null,
 };
 
 export const yScaleOpts = assign({}, xScaleOpts, {

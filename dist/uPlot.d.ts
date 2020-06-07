@@ -240,6 +240,8 @@ declare namespace uPlot {
 			x?: boolean; // true
 			/** toggles dragging in along y */
 			y?: boolean; // false
+			/** min drag distance threshold */
+			dist?: number; // 0
 			/** when x & y are true, sets an upper drag limit in CSS px for adaptive/unidirectional behavior */
 			uni?: number; // null
 		};
@@ -290,9 +292,6 @@ declare namespace uPlot {
 		max?: number,
 	}
 
-	/** a min,max tuple of canvas pixel offsets */
-	export type DataGap = [number, number];
-
 	export interface Series {
 		/** series on/off. when off, it will not affect its scale */
 		show?: boolean;
@@ -303,8 +302,8 @@ declare namespace uPlot {
 		/** scale key */
 		scale?: string;
 
-		/** when true, null data values will not cause line breaks. when fn, should filter and return gaps to span */
-		spanGaps?: boolean | ((self: uPlot, foundGaps: Array<DataGap>, seriesIdx: number) => Array<DataGap>);
+		/** when true, null data values will not cause line breaks */
+		spanGaps?: boolean;
 
 		/** legend label */
 		label?: string;
@@ -328,19 +327,19 @@ declare namespace uPlot {
 
 		points?: {
 			/** if boolean or returns boolean, round points are drawn with defined options, else fn should draw own custom points via self.ctx */
-			show: boolean | ((self: uPlot, seriesIdx: number, idx0: number, idx1: number) => boolean | undefined);
+			show?: boolean | ((self: uPlot, seriesIdx: number, idx0: number, idx1: number) => boolean | undefined);
 
 			/** diameter of point in CSS pixels */
-			size: number;
+			size?: number;
 
 			/** line width of circle outline in CSS pixels */
-			width: CanvasRenderingContext2D['lineWidth'];
+			width?: CanvasRenderingContext2D['lineWidth'];
 
 			/** line color of circle outline (defaults to series.stroke) */
-			stroke: CanvasRenderingContext2D['strokeStyle'];
+			stroke?: CanvasRenderingContext2D['strokeStyle'];
 
 			/** fill color of circle (defaults to #fff) */
-			fill: CanvasRenderingContext2D['fillStyle'];
+			fill?: CanvasRenderingContext2D['fillStyle'];
 		};
 
 		/** any two adjacent series with band: true, are filled as a single low/high band */

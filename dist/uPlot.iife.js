@@ -4,7 +4,7 @@
 *
 * uPlot.js (μPlot)
 * A small, fast chart for time series, lines, areas, ohlc & bars
-* https://github.com/leeoniya/uPlot (v1.0.8)
+* https://github.com/leeoniya/uPlot (v1.0.10)
 */
 
 var uPlot = (function () {
@@ -131,10 +131,6 @@ var uPlot = (function () {
 
 	function fnOrSelf(v) {
 		return typeof v == "function" ? v : function () { return v; };
-	}
-
-	function retArg2(a, b) {
-		return b;
 	}
 
 	function incrRoundUp(num, incr) {
@@ -398,8 +394,16 @@ var uPlot = (function () {
 
 	// https://stackoverflow.com/questions/15141762/how-to-initialize-a-javascript-date-to-a-particular-time-zone/53652131#53652131
 	function tzDate(date, tz) {
-		var date2 = new Date(date.toLocaleString('en-US', {timeZone: tz}));
-		date2.setMilliseconds(date[getMilliseconds]());
+		var date2;
+
+		// perf optimization
+		if (tz == 'Etc/UTC')
+			{ date2 = new Date(+date + date.getTimezoneOffset() * 6e4); }
+		else {
+			date2 = new Date(date.toLocaleString('en-US', {timeZone: tz}));
+			date2.setMilliseconds(date[getMilliseconds]());
+		}
+
 		return date2;
 	}
 
@@ -671,7 +675,10 @@ var uPlot = (function () {
 			setScale: true,
 			x: true,
 			y: false,
-			uni: null
+			dist: 0,
+			uni: null,
+			_x: false,
+			_y: false,
 		},
 
 		focus: {
@@ -774,7 +781,8 @@ var uPlot = (function () {
 
 	// takes stroke width
 	function ptDia(width, mult) {
-		return max(round3(5 * mult), round3(width * mult) * 2 - 1);
+		var dia = 3 + (width || 1) * 2;
+		return round3(dia * mult);
 	}
 
 	function seriesPoints(self, si) {
@@ -789,6 +797,7 @@ var uPlot = (function () {
 		scale: "y",
 		show: true,
 		band: false,
+		spanGaps: false,
 		alpha: 1,
 		points: {
 			show: seriesPoints,
@@ -814,8 +823,8 @@ var uPlot = (function () {
 		time: true,
 		auto: false,
 		distr: 1,
-		min:  inf,
-		max: -inf,
+		min: null,
+		max: null,
 	};
 
 	var yScaleOpts = assign({}, xScaleOpts, {
@@ -942,7 +951,7 @@ var uPlot = (function () {
 
 		var series  = self.series = setDefaults(opts.series || [], xSeriesOpts, ySeriesOpts, false);
 		var axes    = self.axes   = setDefaults(opts.axes   || [], xAxisOpts,   yAxisOpts,    true);
-		var scales  = self.scales = (opts.scales = opts.scales || {});
+		var scales  = self.scales = assign({}, {x: xScaleOpts, y: yScaleOpts}, opts.scales);
 
 		var gutters = assign({
 			x: round(yAxisOpts.size / 2),
@@ -1078,8 +1087,6 @@ var uPlot = (function () {
 			var isTime =  sc.time;
 
 			sc.range = fnOrSelf(sc.range || (isTime ? snapTimeX : i == 0 ? snapNumX : snapNumY));
-
-			s.spanGaps = s.spanGaps === true ? retArg2 : fnOrSelf(s.spanGaps || []);
 
 			var sv = s.value;
 			s.value = isTime ? (isStr(sv) ? timeSeriesVal(_tzDate, timeSeriesStamp(sv, _fmtDate)) : sv || _timeSeriesVal) : sv || numSeriesVal;
@@ -1500,7 +1507,7 @@ var uPlot = (function () {
 			var s = series[si];
 			var p = s.points;
 
-			var width = round3(s[WIDTH] * pxRatio);
+			var width = round3(p.width * pxRatio);
 			var offset = (width % 2) / 2;
 			var isStroked = p.width > 0;
 
@@ -1652,10 +1659,19 @@ var uPlot = (function () {
 				{ dir *= -1; }
 		}
 
-		function buildClip(is, gaps) {
+		function buildClip(is, gaps, nullHead, nullTail) {
 			var s = series[is];
-			var toSpan = new Set(s.spanGaps(self, gaps, is));
-			gaps = gaps.filter(function (g) { return !toSpan.has(g); });
+
+			if (s.spanGaps) {
+				var headGap = gaps[0];
+				var tailGap = gaps[gaps.length - 1];
+				gaps = [];
+
+				if (nullHead)
+					{ gaps.push(headGap); }
+				if (nullTail)
+					{ gaps.push(tailGap); }
+			}
 
 			var clip = null;
 
@@ -1779,7 +1795,7 @@ var uPlot = (function () {
 			}
 
 			if (dir == 1) {
-				_paths.clip = buildClip(is, gaps);
+				_paths.clip = buildClip(is, gaps, ydata[_i0] == null, ydata[_i1] == null);
 
 				if (s.fill != null) {
 					var fill = _paths.fill = new Path2D(stroke);
@@ -2223,9 +2239,9 @@ var uPlot = (function () {
 
 		function scaleValueAtPos(pos, scale) {
 			var dim = plotWidCss;
+
 			if (scale != xScaleKey) {
 				dim = plotHgtCss;
-				// invert the pos on the y axis
 				pos = dim - pos;
 			}
 
@@ -2300,8 +2316,12 @@ var uPlot = (function () {
 
 			var idx;
 
+			// when zooming to an x scale range between datapoints the binary search
+			// for nearest min/max indices results in this condition. cheap hack :D
+			var noDataInRange = i0 > i1;
+
 			// if cursor hidden, hide points & clear legend vals
-			if (mouseLeft1 < 0 || dataLen == 0) {
+			if (mouseLeft1 < 0 || dataLen == 0 || noDataInRange) {
 				idx = null;
 
 				for (var i = 0; i < series.length; i++) {
@@ -2347,7 +2367,7 @@ var uPlot = (function () {
 						{ distsToCursor[i$1] = inf; }
 
 					if (showLegend) {
-						if (i$1 == 0 && multiValLegend)
+						if (idx == cursor.idx || i$1 == 0 && multiValLegend)
 							{ continue; }
 
 						var src$1 = i$1 == 0 && xScaleDistr == 2 ? data0 : data[i$1];
@@ -2364,10 +2384,18 @@ var uPlot = (function () {
 
 			// nit: cursor.drag.setSelect is assumed always true
 			if (select.show && dragging) {
+				var dx = abs(mouseLeft1 - mouseLeft0);
+				var dy = abs(mouseTop1 - mouseTop0);
+
 				if (src != null) {
 					var ref = syncOpts.scales;
 					var xKey = ref[0];
 					var yKey = ref[1];
+
+					// match the dragX/dragY implicitness/explicitness of src
+					var sdrag = src.cursor.drag;
+					dragX = sdrag._x;
+					dragY = sdrag._y;
 
 					if (xKey) {
 						var sc = scales[xKey];
@@ -2402,52 +2430,69 @@ var uPlot = (function () {
 							setStylePx(selectDiv, WIDTH, select[WIDTH] = plotWidCss);
 						}
 					}
+				}
+				else {
+					dragX = drag.x && dx >= drag.dist;
+					dragY = drag.y && dy >= drag.dist;
 
-				} else {
-					// setSelect should not be triggered on move events	
 					var uni = drag.uni;
-		
+
 					if (uni != null) {
-						var dx = abs(mouseLeft0 - mouseLeft1);
-						var dy = abs(mouseTop0 - mouseTop1);
-		
-						dragX = dx >= uni;
-						dragY = dy >= uni;
-		
-						// force unidirectionality when both are under uni limit
-						if (!dragX && !dragY) {
-							if (dy > dx)
-								{ dragY = true; }
-							else
-								{ dragX = true; }
+						// only calc drag status if they pass the dist thresh
+						if (dragX && dragY) {
+							dragX = dx >= uni;
+							dragY = dy >= uni;
+
+							// force unidirectionality when both are under uni limit
+							if (!dragX && !dragY) {
+								if (dy > dx)
+									{ dragY = true; }
+								else
+									{ dragX = true; }
+							}
 						}
 					}
-		
+					else if (drag.x && drag.y && (dragX || dragY))
+						// if omni with no uni then both dragX / dragY should be true if either is true
+						{ dragX = dragY = true; }
+
 					if (dragX) {
 						var minX = min(mouseLeft0, mouseLeft1);
-						var maxX = max(mouseLeft0, mouseLeft1);
+
 						setStylePx(selectDiv, LEFT,  select[LEFT] = minX);
-						setStylePx(selectDiv, WIDTH, select[WIDTH] = maxX - minX);
-		
+						setStylePx(selectDiv, WIDTH, select[WIDTH] = dx);
+
 						if (!dragY) {
 							setStylePx(selectDiv, TOP, select[TOP] = 0);
 							setStylePx(selectDiv, HEIGHT, select[HEIGHT] = plotHgtCss);
 						}
 					}
-		
+
 					if (dragY) {
 						var minY = min(mouseTop0, mouseTop1);
-						var maxY = max(mouseTop0, mouseTop1);
+
 						setStylePx(selectDiv, TOP,    select[TOP] = minY);
-						setStylePx(selectDiv, HEIGHT, select[HEIGHT] = maxY - minY);
-		
+						setStylePx(selectDiv, HEIGHT, select[HEIGHT] = dy);
+
 						if (!dragX) {
 							setStylePx(selectDiv, LEFT, select[LEFT] = 0);
 							setStylePx(selectDiv, WIDTH, select[WIDTH] = plotWidCss);
 						}
 					}
+
+					if (!dragX && !dragY) {
+						// the drag didn't pass the dist requirement
+						setStylePx(selectDiv, HEIGHT, select[HEIGHT] = 0);
+						setStylePx(selectDiv, WIDTH,  select[WIDTH]  = 0);
+					}
 				}
 			}
+
+			cursor.idx = idx;
+			cursor.left = mouseLeft1;
+			cursor.top = mouseTop1;
+			drag._x = dragX;
+			drag._y = dragY;
 
 			// if ts is present, means we're implicitly syncing own cursor as a result of debounced rAF
 			if (ts != null) {
@@ -2470,10 +2515,6 @@ var uPlot = (function () {
 					setSeries(fi, {focus: true}, syncOpts.setSeries);
 				}
 			}
-
-			cursor.idx = idx;
-			cursor.left = mouseLeft1;
-			cursor.top = mouseTop1;
 
 			ready && fire("setCursor");
 		}
@@ -2510,6 +2551,12 @@ var uPlot = (function () {
 				_y = e.clientY - rect.top;
 			}
 			else {
+				if (_x < 0 || _y < 0) {
+					mouseLeft1 = -10;
+					mouseTop1 = -10;
+					return;
+				}
+
 				var ref = syncOpts.scales;
 				var xKey = ref[0];
 				var yKey = ref[1];
@@ -2553,6 +2600,7 @@ var uPlot = (function () {
 		function mouseDown(e, src, _x, _y, _w, _h, _i) {
 			if (src != null || filtMouse(e)) {
 				dragging = true;
+				dragX = dragY = drag._x = drag._y = false;
 
 				cacheMouse(e, src, _x, _y, _w, _h, _i, true, false);
 
@@ -2565,17 +2613,20 @@ var uPlot = (function () {
 
 		function mouseUp(e, src, _x, _y, _w, _h, _i) {
 			if (src != null || filtMouse(e)) {
-				dragging = false;
+				dragging = drag._x = drag._y = false;
 
 				cacheMouse(e, src, _x, _y, _w, _h, _i, false, true);
 				setSelect(select);
 
-				if (drag.setScale && (select[WIDTH] || select[HEIGHT])) {
+				var hasSelect = select[WIDTH] > 0 || select[HEIGHT] > 0;
 
-					if (syncKey != null) {
-						dragX = drag.x;
-						dragY = drag.y;
-					}
+				hasSelect && setSelect(select);
+
+				if (drag.setScale && hasSelect) {
+				//	if (syncKey != null) {
+				//		dragX = drag.x;
+				//		dragY = drag.y;
+				//	}
 
 					batch(function () {
 						if (dragX) {
@@ -2616,11 +2667,58 @@ var uPlot = (function () {
 		}
 
 		function mouseLeave(e, src, _x, _y, _w, _h, _i) {
-			if (!cursor.locked && !dragging) {
+			if (!cursor.locked) {
+				var _dragging = dragging;
+
+				if (dragging) {
+					// handle case when mousemove aren't fired all the way to edges by browser
+					var snapX = true;
+					var snapY = true;
+					var snapProx = 10;
+
+					if (dragX && dragY) {
+						// maybe omni corner snap
+						snapX = mouseLeft1 <= snapProx || mouseLeft1 >= plotWidCss - snapProx;
+						snapY = mouseTop1  <= snapProx || mouseTop1  >= plotHgtCss - snapProx;
+					}
+
+					if (dragX && snapX) {
+						var dLft = mouseLeft1;
+						var dRgt = plotWidCss - mouseLeft1;
+
+						var xMin = min(dLft, dRgt);
+
+						if (xMin == dLft)
+							{ mouseLeft1 = 0; }
+						if (xMin == dRgt)
+							{ mouseLeft1 = plotWidCss; }
+					}
+
+					if (dragY && snapY) {
+						var dTop = mouseTop1;
+						var dBtm = plotHgtCss - mouseTop1;
+
+						var yMin = min(dTop, dBtm);
+
+						if (yMin == dTop)
+							{ mouseTop1 = 0; }
+						if (yMin == dBtm)
+							{ mouseTop1 = plotHgtCss; }
+					}
+
+					updateCursor(1);
+
+					dragging = false;
+				}
+
 				mouseLeft1 = -10;
 				mouseTop1 = -10;
+
 				// passing a non-null timestamp to force sync/mousemove event
 				updateCursor(1);
+
+				if (_dragging)
+					{ dragging = _dragging; }
 			}
 		}
 
@@ -2635,6 +2733,8 @@ var uPlot = (function () {
 				else
 					{ setSelect(( obj = {}, obj[LEFT] = 0, obj[WIDTH] = plotWidCss, obj[TOP] = 0, obj[HEIGHT] = plotHgtCss, obj )); }
 			}
+
+			hideSelect();
 
 			if (e != null)
 				{ sync.pub(dblclick, self, mouseLeft1, mouseTop1, plotWidCss, plotHgtCss, null); }
@@ -2657,8 +2757,10 @@ var uPlot = (function () {
 			on(mousedown, over, mouseDown);
 			on(mousemove, over, mouseMove);
 			on(mouseenter, over, syncRect);
-			on(mouseleave, over, mouseLeave);
-			drag.setScale && on(dblclick, over, dblClick);
+			// this has to be rAF'd so it always fires after the last queued/rAF'd updateCursor
+			on(mouseleave, over, function (e) { rAF(mouseLeave); });
+
+			on(dblclick, over, dblClick);
 
 			deb = debounce(syncRect, 100);
 
