@@ -1125,8 +1125,8 @@ var uPlot = (function () {
 
 		function delSeries(i) {
 			series.splice(i, 1);
-			 legendRows.splice(i, 1)[0][0].parentNode.remove();
-			 cursorPts.splice(i, 1)[0].remove();
+			 legendRows[i] && legendRows.splice(i, 1)[0][0].parentNode.remove();
+			 cursorPts[i] && cursorPts.splice(i, 1)[0].remove();
 
 			// TODO: de-init no-longer-needed scales?
 		}
