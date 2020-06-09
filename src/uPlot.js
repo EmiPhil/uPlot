@@ -381,8 +381,8 @@ export default function uPlot(opts, data, then) {
 
 	function delSeries(i) {
 		series.splice(i, 1);
-		FEAT_LEGEND && legendRows.splice(i, 1)[0][0].parentNode.remove();
-		FEAT_CURSOR && cursorPts.splice(i, 1)[0].remove();
+		FEAT_LEGEND && legendRows[i] && legendRows.splice(i, 1)[0][0].parentNode.remove();
+		FEAT_CURSOR && cursorPts[i] && cursorPts.splice(i, 1)[0].remove();
 
 		// TODO: de-init no-longer-needed scales?
 	}
